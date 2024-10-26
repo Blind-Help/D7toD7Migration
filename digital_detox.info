@@ -1,0 +1,15 @@
+name = "BHP Digital Detox"
+description = "A surgical removal of digital junk from an 8-year-old Drupal 7 site, restoring only what’s necessary and healthy."
+core = 7.x
+package = "Migration"
+
+dependencies[] = migrate
+dependencies[] = migrate_d2d
+
+; Include files for migrations.
+files[] = digital_detox.migrate.inc
+files[] = includes/digital_detox.node.inc
+files[] = includes/digital_detox.term.inc
+files[] = migrations/article.inc
+files[] = migrations/page.inc
+files[] = migrations/software.inc

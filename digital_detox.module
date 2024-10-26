@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * @file digital_detox.module
+ */
+
+/**
+ * Intentionally left empty, see includes/digital_detox.migrate.inc
+ * for the actual implementation.
+ *
+ * @link https://drupal.org/node/1006982
+ */
