@@ -5,8 +5,7 @@
  */
 
 /**
- * Intentionally left empty, see includes/digital_detox.migrate.inc
- * for the actual implementation.
- *
- * @link https://drupal.org/node/1006982
+ * Load constants and utilities when the module is loaded
  */
+module_load_include('inc', 'digital_detox', 'includes/digital_detox.constants');
+module_load_include('inc', 'digital_detox', 'includes/digital_detox.utilities');

@@ -4,59 +4,89 @@
  * @file
  * digital_detox.term.inc
  *
- * Migration class for taxonomy terms.
+ * Migration class for taxonomy terms
  * 
  * This migration handles the migration of taxonomy term data. It migrates 
  * only the term name, applying specific formatting: trimming whitespace, 
- * removing special characters, and converting the term name to title case. 
- * Unnecessary fields are excluded from the migration.
+ * removing special characters, and converting the term name to title case 
+ * Unnecessary fields are excluded from the migration
  */
 
 class TermMigration extends DrupalTerm7Migration {
+  use DigitalDetoxMigrationUtilities;
 
   public function __construct(array $arguments) {
     parent::__construct($arguments);
 
-    // Mapping and formatting the term name.
-    $this->addFieldMapping('name', 'name')                // Term name.
-      ->callbacks(array($this, 'formatTermName'));        // Apply formatting via callback.
+    $this->mapTermFields();
+    $this->excludeUnnecessaryFields();
+  }
 
-    // Excluding Fields from Destination.
+  /**
+   * Maps term fields with proper formatting
+   */
+  protected function mapTermFields() {
+    // Mapping and formatting the term name
+    $this->addFieldMapping('name', 'name')
+      ->callbacks(array($this, 'formatTermName'));
+  }
+
+  /**
+   * Excludes unnecessary fields from the destination
+   */
+  protected function excludeUnnecessaryFields() {
     $this->addUnmigratedDestinations(array(
-      'tid',             // Term ID (auto-assigned on destination).
-      'description',     // Skip term description.
-      'weight',          // Skip term weight.
-      'format',          // Skip text format settings.
+      'tid',
+      'description',
+      'weight',
+      'format'
     ));
   }
 
   /**
-   * Format term names before migration.
+   * Builds the query to migrate taxonomy terms, excluding the "Game" term
    *
-   * - Trims whitespace.
-   * - Removes unwanted special characters, but allows specific ones like &.
-   * - Allows only a single space between words.
-   * - Converts the name to title case (first letter of each word capitalized).
+   * This query excludes the "Game" term from the term migration,
+   * as it is now represented as a separate content type
    *
-   * @param string $name
-   *   The original term name from the source.
-   * 
-   * @return string
-   *   The formatted term name.
+   * @return \SelectQueryExtender
+   *   The modified query object for the term migration
    */
-  public function formatTermName($name) {
-    // Trim whitespace from the term name.
-    $formatted_name = trim($name);
+  protected function query() {
+    // Retrieve the default query from the parent migration class
+    $query = parent::query();
 
-    // Remove special characters, allowing only letters, numbers, spaces, and the & symbol.
-    $formatted_name = preg_replace('/[^a-zA-Z0-9\s&]/', '', $formatted_name);
+    // Exclude the "Game" term by referencing the existing alias `td`
+    $query->condition('td.tid', DIGITAL_DETOX_GAME_TERM_ID, '!=');
 
-    // Replace multiple spaces with a single space.
-    $formatted_name = preg_replace('/\s+/', ' ', $formatted_name);
+    return $query;
+  }
 
-    // Convert the term name to title case (capitalize first letter of each word).
-    $formatted_name = ucwords(strtolower($formatted_name));
+  /**
+   * Validates row data before processing to prevent migration failures
+   */
+  public function prepareRow($row) {
+    if (!$this->validateTermRow($row)) {
+      return FALSE;
+    }
 
-    return $formatted_name;
+    return parent::prepareRow($row);
+  }
+
+  /**
+   * Override addFieldMapping to suppress override warnings
+   *
+   * @param string $destination_field
+   *   The destination field name
+   * @param string $source_field
+   *   The source field name
+   * @param bool $warn_on_override
+   *   Whether to warn on override (ignored, always FALSE)
+   *
+   * @return object
+   *   The field mapping object
+   */
+  public function addFieldMapping($destination_field, $source_field = NULL, $warn_on_override = TRUE) {
+    return parent::addFieldMapping($destination_field, $source_field, FALSE);
   }
 }

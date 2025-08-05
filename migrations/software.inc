@@ -4,10 +4,10 @@
  * @file
  * software.inc
  *
- * Migration class for the Software content type.
+ * Migration class for the Software content type
  * 
  * This class extends CommonNodeMigration to inherit common field mappings and exclusions,
- * while also adding specific mappings for the software node type, such as OS and category fields.
+ * while also adding specific mappings for the software node type, such as OS and category fields
  */
 
 class SoftwareNodeMigration extends CommonNodeMigration {
@@ -15,40 +15,69 @@ class SoftwareNodeMigration extends CommonNodeMigration {
   public function __construct(array $arguments) {
     parent::__construct($arguments);
 
-    // Map the operating system field to the OS taxonomy from the old site.
-    $this->addFieldMapping('field_software_os', 'field_operating_system')->sourceMigration('operating_systems');
-    $this->addFieldMapping('field_software_os:source_type')->defaultValue('tid');
-    $this->addFieldMapping('field_software_os:ignore_case')->defaultValue(TRUE);
+    $this->mapSoftwareFields();
+    $this->excludeSoftwareFields();
+  }
 
-    // Map the software category field to the category taxonomy from the old site.
-    $this->addFieldMapping('field_software_category', 'field_category')->sourceMigration('categories');
-    $this->addFieldMapping('field_software_category:source_type')->defaultValue('tid');
-    $this->addFieldMapping('field_software_category:ignore_case')->defaultValue(TRUE);
+  /**
+   * Maps software-specific fields
+   */
+  protected function mapSoftwareFields() {
+    // Map the operating system field to the OS taxonomy from the old site
+    $this->mapTaxonomyField(
+      DIGITAL_DETOX_FIELD_SOFTWARE_OS,
+      DIGITAL_DETOX_FIELD_OPERATING_SYSTEM,
+      'operating_systems'
+    );
 
-    // Map the download link field and its attributes.
-    $this->addFieldMapping('field_software_dl', 'field_download_link');
-    $this->addFieldMapping('field_software_dl:title', 'field_download_link:title');
-    $this->addFieldMapping('field_software_dl:attributes', 'field_download_link:attributes');
+    // Map the software category field to the category taxonomy from the old site
+    $this->mapTaxonomyField(
+      DIGITAL_DETOX_FIELD_SOFTWARE_CATEGORY,
+      DIGITAL_DETOX_FIELD_CATEGORY,
+      'categories'
+    );
 
-    // Exclude fields that are not needed for migration.
-    $this->addUnmigratedSources(array(
-      'field_image',
-      'field_image:alt',
-      'field_image:title',
-      'field_image:width',
-      'field_image:height',
-      'field_image:language',
-      'field_notes',
-      'field_notes:language',
-      'field_update_item',
-      'field_update_item:language',
-      'field_content_approval',
-      'field_content_approval:language',
-      'field_operating_system:language',
-      'field_category:language',
-      'field_download_link:language',
-      'field_tags',
-      'field_tags:language',
+    // Map the download link field and its attributes
+    $this->mapLinkField(
+      DIGITAL_DETOX_FIELD_SOFTWARE_DL,
+      DIGITAL_DETOX_FIELD_DOWNLOAD_LINK
+    );
+  }
+
+  /**
+   * Excludes fields that are not needed for software migration
+   */
+  protected function excludeSoftwareFields() {
+    $this->excludeCommonFields(array(
+      DIGITAL_DETOX_FIELD_OPERATING_SYSTEM . ':language',
+      DIGITAL_DETOX_FIELD_CATEGORY . ':language',
+      DIGITAL_DETOX_FIELD_DOWNLOAD_LINK . ':language'
     ));
+  }
+
+  /**
+   * Builds the query to migrate software nodes, excluding those tagged as "Game"
+   *
+   * This query excludes nodes with the term ID for "Game" in the category field,
+   * ensuring that only non-game software items are included in the migration
+   *
+   * @return \SelectQueryExtender
+   *   The modified query object for the migration
+   */
+  protected function query() {
+    // Retrieve the default query from the parent migration class
+    $query = parent::query();
+
+    // Subquery to select node IDs associated with the "Game" term
+    // This subquery will help exclude nodes tagged with "Game"
+    $subquery = db_select('taxonomy_index', 'ti')
+      ->fields('ti', array('nid'))
+      ->condition('ti.tid', DIGITAL_DETOX_GAME_TERM_ID);
+
+    // Exclude nodes from the main query where nid is in the subquery result
+    // This ensures no nodes tagged with "Game" are included in the software migration
+    $query->condition('n.nid', $subquery, 'NOT IN');
+
+    return $query;
   }
 }
